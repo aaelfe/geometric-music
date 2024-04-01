@@ -18,7 +18,12 @@ ball = Ball(x=SCREEN_WIDTH/2, y=100, radius=15, color=WHITE, outline_color=RED, 
 clock = pygame.time.Clock()
 
 # A simple flag for controlling playback state
-playback_controls = { "pause": threading.Event(),  "stop": threading.Event() }
+playback_controls = { 
+    "pause": threading.Event(),  
+    "stop": threading.Event(),
+    "total_paused_duration": 0,
+    "pause_start_time": None,
+}
 
 # Define a custom event type for MIDI note on
 MIDI_NOTE_ON = pygame.USEREVENT + 1
@@ -26,7 +31,8 @@ MIDI_NOTE_ON = pygame.USEREVENT + 1
 # Initialize audio
 audio.init()
 audio.play_wav("music/twinkle-twinkle-little-star-non-16.wav")
-midi_thread = threading.Thread(target=audio.play_midi, args=("music/twinkle-twinkle-little-star.mid", playback_controls, MIDI_NOTE_ON))
+global_event_queue = audio.create_global_event_queue('music/twinkle-twinkle-little-star.mid')
+midi_thread = threading.Thread(target=audio.trigger_events, args=(global_event_queue, MIDI_NOTE_ON, playback_controls))
 midi_thread.start()
 
 running = True
