@@ -3,8 +3,10 @@ import pygame.midi
 import threading
 import sys
 import audio
+import math
 from ball import Ball
-from settings import SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, WHITE, RED, FPS
+from bounce_platform import BouncePlatform
+from settings import SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, WHITE, RED, FPS, VERTICAL_CENTER
 
 # Initialize PyGame
 pygame.init()
@@ -12,7 +14,7 @@ pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
 # Create a ball instance
-ball = Ball(x=SCREEN_WIDTH/2, y=100, radius=15, color=WHITE, outline_color=RED, velocity=(0, 0))
+ball = Ball(x=SCREEN_WIDTH/2, y=100, radius=15, color=WHITE, outline_color=RED, velocity=(0, 0), gravity=-0.1, restitution=0.8)
 
 # Clock to control game's frame rate
 clock = pygame.time.Clock()
@@ -37,6 +39,8 @@ midi_thread.start()
 
 running = True
 
+platform = BouncePlatform(ball, length=50, width=10)
+
 # Main game loop
 while running:
     # Event handling
@@ -46,19 +50,31 @@ while running:
         elif event.type == MIDI_NOTE_ON:
             # Handle the MIDI note on event
             audio.pause_playback(playback_controls)
+            ball.pause()
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
             audio.resume_playback(playback_controls)
+            ball.resume()
+            ball.bounce_off_platform(platform)
+        elif event.type == pygame.MOUSEMOTION:
+            # Check if the game is paused and thus in platform angle selection mode
+            if playback_controls["pause"].is_set():
+                # Calculate the new angle for the platform based on mouse position
+                mouse_x, mouse_y = event.pos
+                # Calculate the angle in radians between the mouse and the ball's center
+                angle_rad = math.atan2(ball.y - mouse_y, mouse_x - ball.x)
+                # Convert the angle to degrees and update the platform's angle
+                platform.angle = math.degrees(angle_rad) % 360
         
         pygame.time.delay(10)  # Small delay to limit CPU usage
+
+    vertical_offset = ball.y - VERTICAL_CENTER
     
-    # Game logic
     ball.update()
-    
-    # Clear the screen
     screen.fill(BLACK)
+    ball.draw(screen, y_offset=vertical_offset)
     
-    # Draw the ball
-    ball.draw(screen)
+    if playback_controls["pause"].is_set():
+        platform.draw(screen, y_offset=vertical_offset)
     
     # Update the display
     pygame.display.flip()

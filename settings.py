@@ -1,6 +1,8 @@
 # Screen dimensions
 SCREEN_WIDTH, SCREEN_HEIGHT = 450, 800
 
+VERTICAL_CENTER = SCREEN_HEIGHT/3
+
 # Colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
