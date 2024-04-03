@@ -39,7 +39,7 @@ midi_thread.start()
 
 running = True
 
-platform = BouncePlatform(ball, length=50, width=10)
+platforms = []
 
 # Main game loop
 while running:
@@ -51,10 +51,14 @@ while running:
             # Handle the MIDI note on event
             audio.pause_playback(playback_controls)
             ball.pause()
+
+            new_platform = BouncePlatform(ball, length=50, width=10)
+            platforms.append(new_platform)
+
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
             audio.resume_playback(playback_controls)
             ball.resume()
-            ball.bounce_off_platform(platform)
+            ball.bounce_off_platform(platforms[-1])
         elif event.type == pygame.MOUSEMOTION:
             # Check if the game is paused and thus in platform angle selection mode
             if playback_controls["pause"].is_set():
@@ -63,7 +67,7 @@ while running:
                 # Calculate the angle in radians between the mouse and the ball's center
                 angle_rad = math.atan2(ball.y - mouse_y, mouse_x - ball.x)
                 # Convert the angle to degrees and update the platform's angle
-                platform.angle = math.degrees(angle_rad) % 360
+                platforms[-1].angle = math.degrees(angle_rad) % 360
         
         pygame.time.delay(10)  # Small delay to limit CPU usage
 
@@ -72,9 +76,13 @@ while running:
     ball.update()
     screen.fill(BLACK)
     ball.draw(screen, y_offset=vertical_offset)
+
+    for i, platform in enumerate(platforms):
+        is_recent = (i == len(platforms) - 1)
+        platform.draw(screen, y_offset=vertical_offset, is_recent=is_recent)
     
     if playback_controls["pause"].is_set():
-        platform.draw(screen, y_offset=vertical_offset)
+        platforms[-1].draw(screen, y_offset=vertical_offset)
     
     # Update the display
     pygame.display.flip()
