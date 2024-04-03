@@ -94,6 +94,7 @@ def create_global_event_queue(midi_file_path):
 
 def trigger_events(event_queue, custom_event, controls):
     start_time = time.time()  # Get the current time to use as the start time
+
     while event_queue:
          # Check if the playback is paused
         while controls["pause"].is_set():
@@ -105,6 +106,7 @@ def trigger_events(event_queue, custom_event, controls):
         # Check if the first event in the queue is due to be triggered
         if event_queue[0][0] <= current_time:
             _, events_to_trigger = event_queue.pop(0)  # Remove the event from the queue
+
             for event in events_to_trigger:
                 # Your logic to handle the event goes here.
                 # This could be playing a note, stopping a note, etc.

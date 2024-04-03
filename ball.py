@@ -67,28 +67,37 @@ class Ball:
             speed * math.sin(reflection_angle_rad)  # Negate y-component to account for Pygame's coordinate system
         )
     
-    def project_bounce_path(self, platform_angle, steps=50, step_distance=10):
+    def project_bounce_path(self, platform_angle, steps=100, step_distance=1):
         projected_path = []
-        sim_ball_pos = [self.x, self.y]
-        sim_velocity = list(self.prev_velocity) # when this is called actual velocity will be 0 (paused)
-        gravity = self.gravity
+        # Starting from the ball's current position
+        sim_position = [self.x, self.y]
+
+        # Initial velocity considering the bounce off the platform, using ball's prev_velocity
+        velocity_angle_rad = math.atan2(-self.prev_velocity[1], self.prev_velocity[0])
+        platform_angle_rad = math.radians(platform_angle)
+        reflection_angle_rad = 2*platform_angle_rad - velocity_angle_rad
+        
+        # Calculate the speed (magnitude of the velocity vector)
+        speed = math.sqrt(self.prev_velocity[0] ** 2 + self.prev_velocity[1] ** 2)
+        
+        # Apply restitution
+        speed *= self.restitution
+
+        # Update the velocity based on the reflection angle
+        sim_velocity = [
+            -speed * math.cos(reflection_angle_rad), 
+            speed * math.sin(reflection_angle_rad)  # Negate y-component for Pygame's coordinate system
+        ]
 
         for _ in range(steps):
-            # Update the simulated ball's position
-            sim_ball_pos[0] += sim_velocity[0]
-            sim_ball_pos[1] += sim_velocity[1]
+            # Simulate the ball's movement
+            sim_position[0] += sim_velocity[0] * step_distance
+            sim_position[1] += sim_velocity[1] * step_distance
 
-            # Apply gravity
-            sim_velocity[1] -= gravity
+            # Apply gravity to the y-component of the velocity
+            sim_velocity[1] -= self.gravity * step_distance
 
-            # Add the current position to the path
-            projected_path.append(tuple(sim_ball_pos))
+            # Update the projected path with the new position
+            projected_path.append(tuple(sim_position))
 
-            # Check for bounce - this is simplified, you might want to check based on platform's position
-            if len(projected_path) == steps // 2:  # Assuming bounce occurs halfway through the projection
-                # Reflect the velocity based on the platform angle
-                angle_rad = math.radians(platform_angle)
-                sim_velocity[0] = -sim_velocity[0] * math.cos(2 * angle_rad) - sim_velocity[1] * math.sin(2 * angle_rad)
-                sim_velocity[1] = -sim_velocity[1] * math.cos(2 * angle_rad) + sim_velocity[0] * math.sin(2 * angle_rad)
-        
         return projected_path

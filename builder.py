@@ -43,6 +43,9 @@ platforms = []
 
 # Main game loop
 while running:
+    screen.fill(BLACK)
+    vertical_offset = ball.y - VERTICAL_CENTER
+
     # Event handling
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -59,22 +62,27 @@ while running:
             audio.resume_playback(playback_controls)
             ball.resume()
             ball.bounce_off_platform(platforms[-1])
-        elif event.type == pygame.MOUSEMOTION:
-            # Check if the game is paused and thus in platform angle selection mode
-            if playback_controls["pause"].is_set():
-                # Calculate the new angle for the platform based on mouse position
-                mouse_x, mouse_y = event.pos
-                # Calculate the angle in radians between the mouse and the ball's center
-                angle_rad = math.atan2(ball.y - mouse_y, mouse_x - ball.x)
-                # Convert the angle to degrees and update the platform's angle
-                platforms[-1].angle = math.degrees(angle_rad) % 360
+
+        # event during pauses
+        elif event.type == pygame.MOUSEMOTION and playback_controls["pause"].is_set():
+            # Calculate the new angle for the platform based on mouse position
+            mouse_x, mouse_y = event.pos
+            # Calculate the angle in radians between the mouse and the ball's center
+            angle_rad = math.atan2(ball.y - mouse_y, mouse_x - ball.x)
+            # Convert the angle to degrees and update the platform's angle
+            platforms[-1].angle = math.degrees(angle_rad) % 360
+
+            # Now, project the bounce path based on the new angle
+            projected_path = ball.project_bounce_path(platforms[-1].angle)
+            
+            # Draw the projected path (simplified example)
+            for point in projected_path:
+                adjusted_point = (point[0], point[1] - vertical_offset)
+                pygame.draw.circle(screen, RED, adjusted_point, 3)  # Draw small red circles along the path
         
         pygame.time.delay(10)  # Small delay to limit CPU usage
-
-    vertical_offset = ball.y - VERTICAL_CENTER
     
     ball.update()
-    screen.fill(BLACK)
     ball.draw(screen, y_offset=vertical_offset)
 
     for i, platform in enumerate(platforms):
