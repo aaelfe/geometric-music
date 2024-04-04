@@ -25,6 +25,7 @@ playback_controls = {
     "stop": threading.Event(),
     "total_paused_duration": 0,
     "pause_start_time": None,
+    "time_until_next": 0
 }
 
 # Define a custom event type for MIDI note on
@@ -73,7 +74,7 @@ while running:
             platforms[-1].angle = math.degrees(angle_rad) % 360
 
             # Now, project the bounce path based on the new angle
-            projected_path = ball.project_bounce_path(platforms[-1].angle)
+            projected_path = ball.project_bounce_path(platforms[-1].angle, total_time=playback_controls["time_until_next"])
             
             # Draw the projected path (simplified example)
             for point in projected_path:

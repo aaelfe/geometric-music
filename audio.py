@@ -107,6 +107,10 @@ def trigger_events(event_queue, custom_event, controls):
         if event_queue[0][0] <= current_time:
             _, events_to_trigger = event_queue.pop(0)  # Remove the event from the queue
 
+            controls["time_until_next"] = 0
+            if event_queue:
+                controls["time_until_next"] = event_queue[0][0] - current_time
+                
             for event in events_to_trigger:
                 # Your logic to handle the event goes here.
                 # This could be playing a note, stopping a note, etc.

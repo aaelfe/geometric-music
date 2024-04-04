@@ -67,7 +67,7 @@ class Ball:
             speed * math.sin(reflection_angle_rad)  # Negate y-component to account for Pygame's coordinate system
         )
     
-    def project_bounce_path(self, platform_angle, steps=100, step_distance=1):
+    def project_bounce_path(self, platform_angle, total_time=2, time_per_step=0.1):
         projected_path = []
         # Starting from the ball's current position
         sim_position = [self.x, self.y]
@@ -89,13 +89,15 @@ class Ball:
             speed * math.sin(reflection_angle_rad)  # Negate y-component for Pygame's coordinate system
         ]
 
-        for _ in range(steps):
-            # Simulate the ball's movement
-            sim_position[0] += sim_velocity[0] * step_distance
-            sim_position[1] += sim_velocity[1] * step_distance
+        steps = int((total_time * 60) / time_per_step)
 
+        for _ in range(steps):
             # Apply gravity to the y-component of the velocity
-            sim_velocity[1] -= self.gravity * step_distance
+            sim_velocity[1] -= self.gravity * time_per_step
+
+            # Simulate the ball's movement
+            sim_position[0] += sim_velocity[0] * time_per_step
+            sim_position[1] += sim_velocity[1] * time_per_step
 
             # Update the projected path with the new position
             projected_path.append(tuple(sim_position))
