@@ -1,4 +1,5 @@
 import pygame
+import pygame.gfxdraw
 import pygame.midi
 import threading
 import sys
@@ -74,12 +75,7 @@ while running:
             platforms[-1].angle = math.degrees(angle_rad) % 360
 
             # Now, project the bounce path based on the new angle
-            projected_path = ball.project_bounce_path(platforms[-1].angle, total_time=playback_controls["time_until_next"])
-            
-            # Draw the projected path (simplified example)
-            for point in projected_path:
-                adjusted_point = (point[0], point[1] - vertical_offset)
-                pygame.draw.circle(screen, RED, adjusted_point, 3)  # Draw small red circles along the path
+            ball.project_bounce_path(platforms[-1].angle, total_time=playback_controls["time_until_next"])
         
         pygame.time.delay(10)  # Small delay to limit CPU usage
     
@@ -92,6 +88,14 @@ while running:
     
     if playback_controls["pause"].is_set():
         platforms[-1].draw(screen, y_offset=vertical_offset)
+
+        # Draw the projected path (simplified example)
+        for point in ball.projected_path:
+            adjusted_point = (point[0], point[1] - vertical_offset)
+            x, y = int(point[0]), int(point[1] - vertical_offset)
+            # Draw the outline
+            pygame.gfxdraw.aacircle(screen, x, y, 15, RED)
+            pygame.gfxdraw.filled_circle(screen, x, y, 15, RED)
     
     # Update the display
     pygame.display.flip()

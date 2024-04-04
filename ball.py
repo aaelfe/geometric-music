@@ -15,6 +15,7 @@ class Ball:
 
         self.paused = False
         self.prev_velocity = (0, 0)
+        self.projected_path = []
 
     def draw(self, screen, y_offset):
         adjusted_y = int(self.y - y_offset)
@@ -102,4 +103,4 @@ class Ball:
             # Update the projected path with the new position
             projected_path.append(tuple(sim_position))
 
-        return projected_path
+        self.projected_path = projected_path
