@@ -66,7 +66,7 @@ def create_global_event_queue(midi_file_path):
             # Convert ticks to seconds (for the current segment)
             elapsed_seconds = mido.tick2second(elapsed_ticks, ticks_per_beat, current_tempo)
             
-            if not msg.is_meta and msg.type == 'note_on':
+            if not msg.is_meta and msg.type == 'note_on' and msg.velocity > 0:
                 # Store the event with the absolute time in seconds
                 global_event_queue.append((absolute_time_in_seconds + elapsed_seconds, msg))
     
@@ -77,8 +77,9 @@ def create_global_event_queue(midi_file_path):
     processed_queue = []
     current_time = None
     current_events = []
+    tolerance = 0.01  # Tolerance for grouping events that occur at the same time
     for time, msg in global_event_queue:
-        if time != current_time:
+        if current_time is None or abs(time - current_time) > tolerance:
             if current_events:
                 processed_queue.append((current_time, current_events))
             current_time = time
