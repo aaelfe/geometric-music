@@ -5,6 +5,7 @@ import threading
 import sys
 import audio
 import math
+import time
 from ball import Ball
 from bounce_platform import BouncePlatform
 from settings import SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, WHITE, RED, FPS, VERTICAL_CENTER
@@ -34,6 +35,9 @@ class GameStateManager:
 
     # this state will only run once, to set up builder
     def init_builder(self):
+        # fall for a bit before starting
+        self.initial_fall(length_of_time=0.5)
+
         self.playback_controls = { 
             "pause": threading.Event(),  
             "stop": threading.Event(),
@@ -44,14 +48,33 @@ class GameStateManager:
         audio.init()
         audio.play_wav("music/twinkle-twinkle-little-star-non-16.wav")
         global_event_queue = audio.create_global_event_queue('music/twinkle-twinkle-little-star.mid')
-        self.midi_thread = threading.Thread(target=audio.trigger_events, args=(global_event_queue, MIDI_NOTE_ON, self.playback_controls))
+        self.midi_thread = threading.Thread(target=audio.trigger_builder_events, args=(global_event_queue, MIDI_NOTE_ON, self.playback_controls))
         self.midi_thread.start()
         self.platforms = []
         self.state = "BUILDER"
 
+    def initial_fall(self, length_of_time):
+        # fall for a bit before starting
+        start_time = time.time()
+        current_time = time.time()
+        self.vertical_offset = self.ball.y - VERTICAL_CENTER
+        while(current_time - start_time < length_of_time):
+            self.screen.fill(BLACK)
+            self.ball.update()
+            self.ball.draw(self.screen, y_offset=self.vertical_offset)
+
+            self.vertical_offset = self.ball.y - VERTICAL_CENTER
+            current_time = time.time()
+
+            # Update the display
+            pygame.display.flip()
+
+            # Cap the frame rate
+            self.clock.tick(FPS)
+
     def builder(self):
         self.screen.fill(BLACK)
-        vertical_offset = self.ball.y - VERTICAL_CENTER
+        self.vertical_offset = self.ball.y - VERTICAL_CENTER
 
         # Event handling
         for event in pygame.event.get():
@@ -76,7 +99,7 @@ class GameStateManager:
                 # Calculate the new angle for the platform based on mouse position
                 mouse_x, mouse_y = event.pos
                 # Calculate the angle in radians between the mouse and the ball's center
-                angle_rad = math.atan2(self.ball.y - mouse_y - vertical_offset, mouse_x - self.ball.x)
+                angle_rad = math.atan2(self.ball.y - mouse_y - self.vertical_offset, mouse_x - self.ball.x)
                 # Convert the angle to degrees and update the platform's angle
                 self.platforms[-1].angle = math.degrees(angle_rad) % 360
 
@@ -90,18 +113,18 @@ class GameStateManager:
             pygame.time.delay(10)  # Small delay to limit CPU usage
         
         self.ball.update()
-        self.ball.draw(self.screen, y_offset=vertical_offset)
+        self.ball.draw(self.screen, y_offset=self.vertical_offset)
 
         for i, platform in enumerate(self.platforms):
             is_recent = (i == len(self.platforms) - 1)
-            platform.draw(self.screen, y_offset=vertical_offset, is_recent=is_recent)
+            platform.draw(self.screen, y_offset=self.vertical_offset, is_recent=is_recent)
         
         if self.playback_controls["pause"].is_set():
-            self.platforms[-1].draw(self.screen, y_offset=vertical_offset)
+            self.platforms[-1].draw(self.screen, y_offset=self.vertical_offset)
 
             # Draw the projected path (simplified example)
             for point in self.ball.projected_path:
-                x, y = int(point[0]), int(point[1] - vertical_offset)
+                x, y = int(point[0]), int(point[1] - self.vertical_offset)
                 # Draw the outline
                 pygame.gfxdraw.aacircle(self.screen, x, y, 15, RED)
                 pygame.gfxdraw.filled_circle(self.screen, x, y, 15, RED)
