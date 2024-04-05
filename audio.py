@@ -120,3 +120,6 @@ def trigger_events(event_queue, custom_event, controls):
         else:
             # Sleep for a short duration to avoid busy waiting
             time.sleep(0.01)  # Adjust sleep time as needed for your application
+
+    # now cleanup and switch state
+    stop_playback(controls)
