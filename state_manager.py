@@ -8,7 +8,7 @@ import math
 import time
 from ball import Ball
 from bounce_platform import BouncePlatform
-from settings import SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, WHITE, RED, FPS, VERTICAL_CENTER
+from settings import SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, WHITE, RED, FPS, CAMERA_CENTER, INITIAL_VELOCITY, INITIAL_X, INITIAL_Y
 
 MIDI_NOTE_ON = pygame.USEREVENT + 1
 
@@ -20,7 +20,7 @@ class GameStateManager:
         self.running = True
         self.state = "MAIN_MENU"
 
-        self.ball = Ball(x=SCREEN_WIDTH/2, y=100, radius=15, color=WHITE, outline_color=RED, velocity=(0, 0), gravity=-0.1, restitution=0.8)
+        self.ball = Ball(x=INITIAL_X, y=INITIAL_Y, radius=15, color=WHITE, outline_color=RED, velocity=INITIAL_VELOCITY, gravity=-0.1, restitution=0.8)
 
     def main_menu(self):
         for event in pygame.event.get():
@@ -46,35 +46,16 @@ class GameStateManager:
             "time_until_next": 0
         }
         audio.init()
-        audio.play_wav("music/twinkle-twinkle-little-star-non-16.wav")
-        global_event_queue = audio.create_global_event_queue('music/twinkle-twinkle-little-star.mid')
+        audio.play_wav("music/short-test.wav")
+        global_event_queue = audio.create_global_event_queue('music/short-test.mid')
         self.midi_thread = threading.Thread(target=audio.trigger_builder_events, args=(global_event_queue, MIDI_NOTE_ON, self.playback_controls))
         self.midi_thread.start()
         self.platforms = []
         self.state = "BUILDER"
 
-    def initial_fall(self, length_of_time):
-        # fall for a bit before starting
-        start_time = time.time()
-        current_time = time.time()
-        self.vertical_offset = self.ball.y - VERTICAL_CENTER
-        while(current_time - start_time < length_of_time):
-            self.screen.fill(BLACK)
-            self.ball.update()
-            self.ball.draw(self.screen, y_offset=self.vertical_offset)
-
-            self.vertical_offset = self.ball.y - VERTICAL_CENTER
-            current_time = time.time()
-
-            # Update the display
-            pygame.display.flip()
-
-            # Cap the frame rate
-            self.clock.tick(FPS)
-
     def builder(self):
         self.screen.fill(BLACK)
-        self.vertical_offset = self.ball.y - VERTICAL_CENTER
+        self.vertical_offset = self.ball.y - CAMERA_CENTER
 
         # Event handling
         for event in pygame.event.get():
@@ -108,7 +89,7 @@ class GameStateManager:
             
             elif self.playback_controls["stop"].is_set():
                 self.midi_thread.join()
-                self.state = "MAIN_MENU"
+                self.state = "INIT_PLAYBACK"
 
             pygame.time.delay(10)  # Small delay to limit CPU usage
         
@@ -135,16 +116,82 @@ class GameStateManager:
         # Cap the frame rate
         self.clock.tick(FPS)
 
-    def paused(self):
+    # run once to set up playback
+    def init_playback(self):
+        # reset ball position and velocity
+        self.ball.x = INITIAL_X
+        self.ball.y = INITIAL_Y
+        self.ball.velocity = INITIAL_VELOCITY
+
+        # replay initial fall
+        self.initial_fall(length_of_time=0.5)
+
+        self.playback_controls = { 
+            "pause": threading.Event(),  
+            "stop": threading.Event(),
+            "total_paused_duration": 0,
+            "pause_start_time": None,
+            "time_until_next": 0
+        }
+
+        audio.init()
+        audio.play_wav("music/short-test.wav")
+        global_event_queue = audio.create_global_event_queue('music/short-test.mid')
+        self.midi_thread = threading.Thread(target=audio.trigger_playback_events, args=(global_event_queue, MIDI_NOTE_ON, self.playback_controls))
+        self.midi_thread.start()
+        self.platform_index = 0
+
+        self.state = "PLAYBACK"
+
+    def playback(self):
+        self.screen.fill(BLACK)
+        vertical_offset = self.ball.y - CAMERA_CENTER
+
+        # Event handling
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
-            # Resume game
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                self.state = "BUILDER"
-        self.screen.fill((100, 0, 200))
-        # Render paused screen...
+
+            elif event.type == MIDI_NOTE_ON:
+                self.ball.bounce_off_platform(self.platforms[self.platform_index])
+                self.platform_index += 1
+
+            elif self.playback_controls["stop"].is_set():
+                self.midi_thread.join()
+                self.state = "MAIN_MENU"
+
+            pygame.time.delay(10)  # Small delay to limit CPU usage
+        
+        self.ball.update()
+        self.ball.draw(self.screen, y_offset=vertical_offset)
+
+        for platform in self.platforms:
+            platform.draw(self.screen, y_offset=vertical_offset)
+        
+        # Update the display
         pygame.display.flip()
+        
+        # Cap the frame rate
+        self.clock.tick(FPS)
+
+    def initial_fall(self, length_of_time):
+        # fall for a bit before starting
+        start_time = time.time()
+        current_time = time.time()
+        self.vertical_offset = self.ball.y - CAMERA_CENTER
+        while(current_time - start_time < length_of_time):
+            self.screen.fill(BLACK)
+            self.ball.update()
+            self.ball.draw(self.screen, y_offset=self.vertical_offset)
+
+            self.vertical_offset = self.ball.y - CAMERA_CENTER
+            current_time = time.time()
+
+            # Update the display
+            pygame.display.flip()
+
+            # Cap the frame rate
+            self.clock.tick(FPS)
 
     def run(self):
         while self.running:
@@ -154,8 +201,10 @@ class GameStateManager:
                 self.init_builder()
             elif self.state == "BUILDER":
                 self.builder()
-            elif self.state == "PAUSED":
-                self.paused()
+            elif self.state == "INIT_PLAYBACK":
+                self.init_playback()
+            elif self.state == "PLAYBACK":
+                self.playback()
         pygame.quit()
         sys.exit()
 

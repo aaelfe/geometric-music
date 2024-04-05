@@ -7,7 +7,7 @@ import audio
 import math
 from ball import Ball
 from bounce_platform import BouncePlatform
-from settings import SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, WHITE, RED, FPS, VERTICAL_CENTER
+from settings import SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, WHITE, RED, FPS, CAMERA_CENTER
 
 # Initialize PyGame
 pygame.init()
@@ -46,7 +46,7 @@ platforms = []
 # Main game loop
 while running:
     screen.fill(BLACK)
-    vertical_offset = ball.y - VERTICAL_CENTER
+    vertical_offset = ball.y - CAMERA_CENTER
 
     # Event handling
     for event in pygame.event.get():

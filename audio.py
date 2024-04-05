@@ -93,7 +93,7 @@ def create_global_event_queue(midi_file_path):
     
     return processed_queue
 
-def trigger_events(event_queue, custom_event, controls):
+def trigger_builder_events(event_queue, custom_event, controls):
     start_time = time.time()  # Get the current time to use as the start time
 
     while event_queue:
@@ -111,6 +111,30 @@ def trigger_events(event_queue, custom_event, controls):
             controls["time_until_next"] = 0
             if event_queue:
                 controls["time_until_next"] = event_queue[0][0] - current_time
+                
+            for event in events_to_trigger:
+                # Your logic to handle the event goes here.
+                # This could be playing a note, stopping a note, etc.
+                print(f"Triggering event at {current_time}: {event}")
+            event = pygame.event.Event(custom_event, note=events_to_trigger[0].note, velocity=events_to_trigger[0].velocity)
+            pygame.event.post(event)
+        else:
+            # Sleep for a short duration to avoid busy waiting
+            time.sleep(0.01)  # Adjust sleep time as needed for your application
+
+    # now cleanup and switch state
+    stop_playback(controls)
+
+def trigger_playback_events(event_queue, custom_event, controls):
+    start_time = time.time()  # Get the current time to use as the start time
+
+    while event_queue:
+        # Calculate elapsed time
+        current_time = time.time() - start_time
+
+        # Check if the first event in the queue is due to be triggered
+        if event_queue[0][0] <= current_time:
+            _, events_to_trigger = event_queue.pop(0)  # Remove the event from the queue
                 
             for event in events_to_trigger:
                 # Your logic to handle the event goes here.
