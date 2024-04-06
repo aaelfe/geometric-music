@@ -46,14 +46,18 @@ class GameStateManager:
             "time_until_next": 0
         }
         audio.init()
-        audio.play_wav("music/short-test.wav")
-        global_event_queue = audio.create_global_event_queue('music/short-test.mid')
+        audio.play_wav("music/twinkle-twinkle-little-star-non-16.wav")
+        global_event_queue = audio.create_global_event_queue('music/twinkle-twinkle-little-star.mid')
         self.midi_thread = threading.Thread(target=audio.trigger_builder_events, args=(global_event_queue, MIDI_NOTE_ON, self.playback_controls))
         self.midi_thread.start()
         self.platforms = []
+        self.frame_data = []
         self.state = "BUILDER"
 
     def builder(self):
+        if not self.playback_controls["pause"].is_set():
+           self.frame_data.append((self.ball.x, self.ball.y))
+
         self.screen.fill(BLACK)
         self.vertical_offset = self.ball.y - CAMERA_CENTER
 
@@ -135,8 +139,8 @@ class GameStateManager:
         }
 
         audio.init()
-        audio.play_wav("music/short-test.wav")
-        global_event_queue = audio.create_global_event_queue('music/short-test.mid')
+        audio.play_wav("music/twinkle-twinkle-little-star-non-16.wav")
+        global_event_queue = audio.create_global_event_queue('music/twinkle-twinkle-little-star.mid')
         self.midi_thread = threading.Thread(target=audio.trigger_playback_events, args=(global_event_queue, MIDI_NOTE_ON, self.playback_controls))
         self.midi_thread.start()
         self.platform_index = 0
@@ -152,9 +156,9 @@ class GameStateManager:
             if event.type == pygame.QUIT:
                 self.running = False
 
-            elif event.type == MIDI_NOTE_ON:
-                self.ball.bounce_off_platform(self.platforms[self.platform_index])
-                self.platform_index += 1
+            # elif event.type == MIDI_NOTE_ON:
+            #     self.ball.bounce_off_platform(self.platforms[self.platform_index])
+            #     self.platform_index += 1
 
             elif self.playback_controls["stop"].is_set():
                 self.midi_thread.join()
@@ -162,7 +166,11 @@ class GameStateManager:
 
             pygame.time.delay(10)  # Small delay to limit CPU usage
         
-        self.ball.update()
+        if(len(self.frame_data) > self.platform_index):
+            self.ball.x = self.frame_data[self.platform_index][0]
+            self.ball.y = self.frame_data[self.platform_index][1]
+        self.platform_index += 1
+        #self.ball.update()
         self.ball.draw(self.screen, y_offset=vertical_offset)
 
         for platform in self.platforms:
