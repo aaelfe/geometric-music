@@ -8,7 +8,7 @@ import math
 import time
 from ball import Ball
 from bounce_platform import BouncePlatform
-from settings import SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, WHITE, RED, FPS, CAMERA_CENTER, INITIAL_VELOCITY, INITIAL_X, INITIAL_Y
+from settings import SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, WHITE, RED, GREEN, FPS, CAMERA_CENTER, INITIAL_VELOCITY, INITIAL_X, INITIAL_Y
 
 MIDI_NOTE_ON = pygame.USEREVENT + 1
 
@@ -43,7 +43,9 @@ class GameStateManager:
             "stop": threading.Event(),
             "total_paused_duration": 0,
             "pause_start_time": None,
-            "time_until_next": 0
+            "time_until_next": 0,
+            "can_resume": True,
+            "alert_color": GREEN
         }
         audio.init()
         audio.play_wav("music/twinkle-twinkle-little-star-non-16.wav")
@@ -74,7 +76,7 @@ class GameStateManager:
                 new_platform = BouncePlatform(self.ball, length=50, width=10)
                 self.platforms.append(new_platform)
 
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_r and self.playback_controls["can_resume"] == True:
                 audio.resume_playback(self.playback_controls)
                 self.ball.resume()
                 self.ball.bounce_off_platform(self.platforms[-1])
@@ -87,10 +89,22 @@ class GameStateManager:
                 angle_rad = math.atan2(self.ball.y - mouse_y - self.vertical_offset, mouse_x - self.ball.x)
                 # Convert the angle to degrees and update the platform's angle
                 self.platforms[-1].angle = math.degrees(angle_rad) % 360
+                self.platforms[-1].recompute_verticies(True, self.vertical_offset)
 
                 # Now, project the bounce path based on the new angle
                 self.ball.project_bounce_path(self.platforms[-1].angle, total_time=self.playback_controls["time_until_next"])
             
+                # check for collisions on new path and disable resuming if necessary
+                # self.playback_controls["can_resume"] = False   
+                self.playback_controls["alert_color"] = GREEN
+
+                for point in self.ball.projected_path:
+                    x, y = int(point[0]), int(point[1] - self.vertical_offset)
+                    for i, platform in enumerate(self.platforms[:-1]):
+                        if platform.check_collision((x,y), self.ball.radius):
+                            self.playback_controls["alert_color"] = RED
+                            break
+
             elif self.playback_controls["stop"].is_set():
                 self.midi_thread.join()
                 self.state = "INIT_PLAYBACK"
@@ -100,19 +114,16 @@ class GameStateManager:
         self.ball.update()
         self.ball.draw(self.screen, y_offset=self.vertical_offset)
 
-        for i, platform in enumerate(self.platforms):
-            is_recent = (i == len(self.platforms) - 1)
-            platform.draw(self.screen, y_offset=self.vertical_offset, is_recent=is_recent)
+        for platform in self.platforms:
+            platform.draw(self.screen, y_offset=self.vertical_offset)
         
         if self.playback_controls["pause"].is_set():
-            self.platforms[-1].draw(self.screen, y_offset=self.vertical_offset)
-
-            # Draw the projected path (simplified example)
+            # Draw the projected path
             for point in self.ball.projected_path:
                 x, y = int(point[0]), int(point[1] - self.vertical_offset)
                 # Draw the outline
-                pygame.gfxdraw.aacircle(self.screen, x, y, 15, RED)
-                pygame.gfxdraw.filled_circle(self.screen, x, y, 15, RED)
+                pygame.gfxdraw.aacircle(self.screen, x, y, self.ball.radius, self.playback_controls["alert_color"])
+                pygame.gfxdraw.filled_circle(self.screen, x, y, self.ball.radius, self.playback_controls["alert_color"])
         
         # Update the display
         pygame.display.flip()
@@ -135,7 +146,7 @@ class GameStateManager:
             "stop": threading.Event(),
             "total_paused_duration": 0,
             "pause_start_time": None,
-            "time_until_next": 0
+            "time_until_next": 0,
         }
 
         audio.init()
