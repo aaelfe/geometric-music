@@ -96,6 +96,8 @@ def create_global_event_queue(midi_file_path):
 def trigger_builder_events(event_queue, custom_event, controls):
     start_time = time.time()  # Get the current time to use as the start time
 
+    play_wav("music/twinkle-twinkle-little-star-non-16.wav")
+
     while event_queue:
          # Check if the playback is paused
         while controls["pause"].is_set():

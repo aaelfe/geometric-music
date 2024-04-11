@@ -20,7 +20,7 @@ class GameStateManager:
         self.running = True
         self.state = "MAIN_MENU"
 
-        self.ball = Ball(x=INITIAL_X, y=INITIAL_Y, radius=15, color=WHITE, outline_color=RED, velocity=INITIAL_VELOCITY, gravity=-0.1, restitution=0.8)
+        self.ball = Ball(x=INITIAL_X, y=INITIAL_Y, radius=15, color=WHITE, outline_color=RED, velocity=INITIAL_VELOCITY, gravity=-0.3, restitution=0.8)
 
     def main_menu(self):
         for event in pygame.event.get():
@@ -48,17 +48,18 @@ class GameStateManager:
             "alert_color": GREEN
         }
         audio.init()
-        audio.play_wav("music/twinkle-twinkle-little-star-non-16.wav")
         global_event_queue = audio.create_global_event_queue('music/twinkle-twinkle-little-star.mid')
         self.midi_thread = threading.Thread(target=audio.trigger_builder_events, args=(global_event_queue, MIDI_NOTE_ON, self.playback_controls))
         self.midi_thread.start()
         self.platforms = []
         self.frame_data = []
+        self.fps_data = []
         self.state = "BUILDER"
 
     def builder(self):
         if not self.playback_controls["pause"].is_set():
            self.frame_data.append((self.ball.x, self.ball.y))
+           self.fps_data.append(self.clock.get_fps())
 
         self.screen.fill(BLACK)
         self.vertical_offset = self.ball.y - CAMERA_CENTER
@@ -93,17 +94,30 @@ class GameStateManager:
 
                 # Now, project the bounce path based on the new angle
                 self.ball.project_bounce_path(self.platforms[-1].angle, total_time=self.playback_controls["time_until_next"])
-            
-                # check for collisions on new path and disable resuming if necessary
-                # self.playback_controls["can_resume"] = False   
+
+                self.playback_controls["can_resume"] = True
                 self.playback_controls["alert_color"] = GREEN
 
-                for point in self.ball.projected_path:
-                    x, y = int(point[0]), int(point[1] - self.vertical_offset)
-                    for i, platform in enumerate(self.platforms[:-1]):
-                        if platform.check_collision((x,y), self.ball.radius):
-                            self.playback_controls["alert_color"] = RED
-                            break
+                # Assume you want to check the last 5 frames, adjust as necessary
+                num_frames_to_check = 5
+                recent_frames = self.frame_data[:-1]
+
+                # self.playback_controls["can_resume"] = True
+                # for frame in recent_frames:
+                #     ball_x, ball_y = frame
+                #     if self.platforms[-1].check_collision((ball_x, ball_y - self.vertical_offset), self.ball.radius):
+                #         self.playback_controls["alert_color"] = RED
+                #         self.playback_controls["can_resume"] = False
+                #         break
+
+                # if self.playback_controls["can_resume"]:
+                #     for point in self.ball.projected_path:
+                #         x, y = int(point[0]), int(point[1] - self.vertical_offset)
+                #         for i, platform in enumerate(self.platforms[:-1]):
+                #             if platform.check_collision((x,y), self.ball.radius):
+                #                 self.playback_controls["alert_color"] = RED
+                #                 self.playback_controls["can_resume"] = False
+                #                 break
 
             elif self.playback_controls["stop"].is_set():
                 self.midi_thread.join()
@@ -131,12 +145,18 @@ class GameStateManager:
         # Cap the frame rate
         self.clock.tick(FPS)
 
+        # Calculate and display the frame rate
+        pygame.display.set_caption("FPS: {:.2f}".format(self.clock.get_fps()))
+
+
     # run once to set up playback
     def init_playback(self):
         # reset ball position and velocity
         self.ball.x = INITIAL_X
         self.ball.y = INITIAL_Y
         self.ball.velocity = INITIAL_VELOCITY
+
+        self.playback_fps = sum(self.fps_data) / len(self.fps_data)
 
         # replay initial fall
         self.initial_fall(length_of_time=0.5)
@@ -151,9 +171,9 @@ class GameStateManager:
 
         audio.init()
         audio.play_wav("music/twinkle-twinkle-little-star-non-16.wav")
-        global_event_queue = audio.create_global_event_queue('music/twinkle-twinkle-little-star.mid')
-        self.midi_thread = threading.Thread(target=audio.trigger_playback_events, args=(global_event_queue, MIDI_NOTE_ON, self.playback_controls))
-        self.midi_thread.start()
+        # global_event_queue = audio.create_global_event_queue('music/twinkle-twinkle-little-star.mid')
+        # self.midi_thread = threading.Thread(target=audio.trigger_playback_events, args=(global_event_queue, MIDI_NOTE_ON, self.playback_controls))
+        # self.midi_thread.start()
         self.platform_index = 0
 
         self.state = "PLAYBACK"
@@ -192,6 +212,9 @@ class GameStateManager:
         
         # Cap the frame rate
         self.clock.tick(FPS)
+
+        pygame.display.set_caption("FPS: {:.2f}".format(self.clock.get_fps()))
+
 
     def initial_fall(self, length_of_time):
         # fall for a bit before starting
