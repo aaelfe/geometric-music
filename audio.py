@@ -7,7 +7,7 @@ def init():
     pygame.mixer.init()
     pygame.midi.init()
 
-def play_wav(file_path):
+def play(file_path):
     pygame.mixer.music.load(file_path)
     pygame.mixer.music.play(-1)
 
@@ -93,10 +93,10 @@ def create_global_event_queue(midi_file_path):
     
     return processed_queue
 
-def trigger_builder_events(event_queue, custom_event, controls):
+def trigger_builder_events(event_queue, wav_file_path, custom_event, controls):
     start_time = time.time()  # Get the current time to use as the start time
 
-    play_wav("music/twinkle-twinkle-little-star-non-16.wav")
+    play(wav_file_path)
 
     while event_queue:
          # Check if the playback is paused
@@ -104,7 +104,9 @@ def trigger_builder_events(event_queue, custom_event, controls):
             time.sleep(0.01)  # Sleep for a short duration to reduce CPU usage during pause
 
         # Calculate elapsed time, account for pause duration
-        current_time = time.time() - start_time - controls["total_paused_duration"]  
+        current_time = time.time() - start_time - controls["total_paused_duration"]
+
+        print(f"Current time: {current_time}, Start time: {start_time}, Total paused duration: {controls['total_paused_duration']}")
 
         # Check if the first event in the queue is due to be triggered
         if event_queue[0][0] <= current_time:

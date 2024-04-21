@@ -2,6 +2,8 @@ import pygame
 import pygame.gfxdraw
 import math
 
+from settings import FPS
+
 class Ball:
     def __init__(self, x, y, radius, color, outline_color, velocity, gravity, restitution):
         self.x = x
@@ -90,7 +92,7 @@ class Ball:
             speed * math.sin(reflection_angle_rad)  # Negate y-component for Pygame's coordinate system
         ]
 
-        steps = int((total_time * 60) / time_per_step)
+        steps = int((total_time * FPS) / time_per_step)
 
         for _ in range(steps):
             # Apply gravity to the y-component of the velocity
@@ -102,5 +104,16 @@ class Ball:
 
             # Update the projected path with the new position
             projected_path.append(tuple(sim_position))
+     
+        # # print every parameter and every self variable used in this function
+        # print("platform_angle",platform_angle)
+        # print("total_time",total_time)
+        # print("time_per_step",time_per_step)
+        # print("self.prev_velocity",self.prev_velocity)
+        # print("self.restitution",self.restitution)
+        # print("self.gravity",self.gravity)
+        # print("self.x",self.x)
+        # print("self.y",self.y)
+        # print("self.radius",self.radius)
 
         self.projected_path = projected_path
