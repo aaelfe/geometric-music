@@ -37,7 +37,7 @@ class BuilderEnvironment(gym.Env):
         midi_filepath = "music/short-test.mid"
         wav_filepath = "music/short-test.wav"
 
-        self.state_manager.reset()
+        self.state_manager.reset(rate=1)
 
         observation = self._get_obs()
         info = self._get_info()
@@ -49,8 +49,16 @@ class BuilderEnvironment(gym.Env):
 
         terminated = self.state_manager.terminated
         completed = self.state_manager.completed
+        num_platforms = len(self.state_manager.platforms)
+        vertical_offset = self.state_manager.vertical_offset
 
-        reward = -10 if terminated else 10 if completed else 0
+        reward = num_platforms - vertical_offset/10
+        if terminated and completed:
+            reward *= 2
+        elif terminated:
+            reward *= 0.5
+
+        #reward = 10 if terminated and completed else -10 if terminated else 0
         observation = self._get_obs()
         info = self._get_info()
 
@@ -59,6 +67,9 @@ class BuilderEnvironment(gym.Env):
     def close(self):
         self.state_manager.close()
         self.state_manager.midi_thread.join()
+
+    def playback(self):
+        self.state_manager.init_playback()
 
     def _get_obs(self):
         platform_locations = []
@@ -79,9 +90,9 @@ class BuilderEnvironment(gym.Env):
 
         # Padding is no longer needed here because we have ensured the array is always (25, 2)
         return {
-            "agent": np.array([self.state_manager.ball.x, self.state_manager.ball.y], dtype=np.float32),
+            "agent": np.array([self.state_manager.ball.x, self.state_manager.ball.y], dtype=np.float64),
             "platforms": platform_locations,  # This is a fixed-size array of shape (25, 2)
-            "velocity": np.array([self.state_manager.ball.velocity[0], self.state_manager.ball.velocity[1]], dtype=np.float32)
+            "velocity": np.array([self.state_manager.ball.velocity[0], self.state_manager.ball.velocity[1]], dtype=np.float64)
         }
         # platform_locations = []
 
